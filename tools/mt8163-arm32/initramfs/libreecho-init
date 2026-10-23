@@ -2074,6 +2074,18 @@ stop_ui_voice_owners()
     return 0
 }
 
+# Owner boot hook. An owner-installed /data/libreecho/hooks/boot.sh runs once
+# per boot as root, detached, after every service has been started; output goes
+# to /var/log/libreecho-boot-hook.log. The image ships no hook, so nothing runs
+# unless the owner puts one there; deleting the file turns it off.
+run_owner_boot_hook()
+{
+    hook=/data/libreecho/hooks/boot.sh
+    [ -f "$hook" ] && [ ! -L "$hook" ] || return 0
+    log owner-boot-hook-start
+    $BB setsid $BB sh "$hook" </dev/null >>/var/log/libreecho-boot-hook.log 2>&1 &
+}
+
 start_ui_services()
 {
     [ -x /usr/local/sbin/libreecho-web ] || {
@@ -2226,6 +2238,7 @@ start_ui_services()
         fi
     done
     [ "$feature_degraded" = 1 ] || start_persisted_feature_services
+    run_owner_boot_hook
     return 0
 }
 start_ui_services &
